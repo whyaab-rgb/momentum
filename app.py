@@ -349,11 +349,11 @@ def style_dataframe(df):
 
     styler = (
         df.style
-        .applymap(color_signal, subset=["Signal"])
-        .applymap(color_grade, subset=["Grade"])
-        .applymap(color_rvol, subset=["RVOL"])
-        .applymap(color_score, subset=["Score"])
-        .applymap(color_change, subset=["Change %"])
+        .map(color_signal, subset=["Signal"])
+        .map(color_grade, subset=["Grade"])
+        .map(color_rvol, subset=["RVOL"])
+        .map(color_score, subset=["Score"])
+        .map(color_change, subset=["Change %"])
         .format({
             "Price": "{:,.2f}",
             "Change %": "{:,.2f}",
