@@ -32,7 +32,6 @@ DEFAULT_SYMBOLS = [
     "INTP","SMBR","CSAP","RANC","HERO","AMRT","MIDI","DAYA","MAPB","MPPA",
     "ULTJ","CLEO","DLTA","ICBP","ROTI","SKLT","STTP","AISA","CEKA","GOOD",
 ]
-]
 
 # =========================
 # HELPERS
