@@ -1,89 +1,361 @@
-# app.py
-# Streamlit Screener Saham Akumulasi - RVOL Tinggi
-# Jalankan:
-# pip install streamlit yfinance pandas numpy
-# streamlit run app.py
 
 import streamlit as st
 import pandas as pd
 import numpy as np
 import yfinance as yf
-from datetime import datetime
+import requests
+from datetime import datetime, time
 
-st.set_page_config(page_title="Screener Akumulasi RVOL", layout="wide")
+try:
+    from zoneinfo import ZoneInfo
+except Exception:
+    ZoneInfo = None
 
-# =========================
-# CONFIG
-# =========================
-DEFAULT_SYMBOLS = [
-"AALI","ABBA","ABDA","ABMM","ACES","ACST","ADCP","ADES","ADHI","ADMF","ADMG","ADMR","ADRO",
-"AGAR","AGII","AGRO","AGRS","AHAP","AIMS","AISA","AKKU","AKPI","AKRA","AKSI","ALDO","ALKA",
-"ALMI","ALTO","AMAG","AMFG","AMIN","AMMN","AMRT","ANDI","ANJT","ANTM","APEX","APIC","APII",
-"APLI","APLN","ARCI","ARGO","ARII","ARKA","ARMY","ARTI","ARTO","ASBI","ASDM","ASGR","ASII",
-"ASJT","ASMI","ASRI","ASRM","ASUR","ATAP","ATIC","ATPK","AUTO","AVIA","AWAN","AXIO","BACA",
-"BAJA","BALI","BANK","BAPA","BATA","BAUT","BBCA","BBHI","BBKP","BBLD","BBMD","BBNI","BBRI",
-"BBTN","BBYB","BCAP","BCIC","BDMN","BEKS","BELL","BEST","BFIN","BGTR","BHIT","BIKA","BIMA",
-"BINA","BIRD","BISI","BKDP","BKSL","BLTA","BLUE","BMHS","BMRI","BMSR","BMTR","BNBA","BNBR",
-"BNGA","BNII","BNLI","BNRI","BOBA","BOGA","BOIS","BOLT","BOSS","BPIS","BRAM","BRIS","BRMS",
-"BRNA","BRPT","BSDE","BSSR","BSWD","BTBA","BTON","BULL","BUMI","BVIC","BWPT","BYAN","CAKK",
-"CAMP","CANB","CARS","CASS","CBMF","CBPE","CBUT","CCSI","CEKA","CFIN","CGAS","CHIP","CINT",
-"CITA","CLAY","CLEO","CMNP","CMRY","CNKO","COWL","CPIN","CSAP","CSIS","CTBN","CTRA","CTTH",
-"DAAZ","DADA","DART","DAYA","DEAL","DEFI","DEPO","DEWA","DFAM","DFAR","DFIL","DKFT","DLTA",
-"DMAS","DNAR","DOID","DPNS","DSFI","DSNG","DSSA","DUTI","DYAN","ECII","EDGE","ELSA","ELTY",
-"EMDE","EMTK","ENAK","ENRG","ENZO","EPAC","ERAA","ESTA","ETWA","EXCL","FAST","FASW","FCAP",
-"FMII","FORU","FPNI","FREN","FUTR","GAMA","GGRM","GIAA","GJTL","GLVA","GMFI","GOTO","GOOD",
-"GPRA","GREN","GTBO","GTSI","GULA","GZCO","HADE","HAIS","HDIT","HEAL","HERO","HITS","HKMU",
-"HMAS","HMET","HMSP","HOKI","HRTA","HRUM","IBST","ICBP","ICON","IDPR","IFII","IGAR","IIKP",
-"IKAN","IKBI","IMAS","IMJS","IMPC","INAF","INAI","INCF","INCO","INDF","INDR","INDY","INKP",
-"INOV","INPP","INPS","INTA","INTP","IPCM","IPTV","ISAT","ITIC","ITMA","ITMG","JARR","JAST",
-"JAYA","JECC","JGLE","JKON","JKSW","JMAS","JPFA","JSMR","JSPT","KAEF","KARW","KAYU","KBLM",
-"KBLV","KBRI","KDSI","KEEN","KEJU","KIAS","KICI","KINO","KIOS","KJEN","KLBV","KLBF","KMDS",
-"KMTR","KOBX","KONI","KOPI","KOTA","KRAH","KRAS","LABA","LAPD","LCGP","LEAD","LETO","LIFE",
-"LINK","LION","LMAS","LMPI","LMPP","LOPI","LPCK","LPIN","LPLI","LPKR","LPPF","LPPS","LRNA",
-"LSIP","LTLS","LUCY","MAGP","MAIN","MAPA","MAPI","MARK","MASB","MASP","MAYA","MBAP","MBSS",
-"MCAS","MCOL","MCOR","MDKA","MEDC","MEGA","MERK","MFMI","MGNA","MGRO","MIDI","MIKA","MIRA",
-"MITI","MLBI","MLIA","MLPL","MLPT","MMLP","MNCN","MOLI","MORE","MPMX","MPPA","MRAT","MREI",
-"MSIN","MSKY","MTDL","MTFN","MTLA","MTPS","MYOH","MYOR","MYRX","NATO","NELY","NFCX","NIKL",
-"NINE","NIPS","NISP","NOBU","NPGF","NRCA","NTBK","OASA","OKAS","OMRE","OPMS","PACK","PADI",
-"PAMG","PANI","PANS","PARK","PBID","PBRX","PCAR","PDES","PEGE","PEHA","PGAS","PGJO","PGLI",
-"PICO","PKPK","PLAS","PLIN","PMMP","PNBN","PNBS","PNGO","PNIN","PNLF","PNSE","POLI","POLL",
-"POLU","POWR","PPGL","PPRE","PPRO","PRAS","PRDA","PRIM","PSAB","PSDN","PSGO","PTBA","PTPP",
-"PTRO","PTSN","PTSP","PTPW","PUDP","PURA","PWON","PYFA","RAJA","RALS","RANC","RDTX","RELI",
-"RICY","RIMO","RISE","RJHI","RODA","ROTI","RUIS","RUNC","RVLT","SAFE","SAME","SAMF","SAPX",
-"SATM","SBAT","SCMA","SDMU","SDPC","SDRA","SEMA","SGER","SHID","SIDO","SILO","SIMP","SIMS",
-"SIPD","SIRT","SKBM","SKLT","SMAR","SMBR","SMCB","SMDR","SMGR","SMKL","SMRA","SMRU","SMSM",
-"SMSS","SOCI","SOHO","SOTS","SPMA","SPTO","SRIL","SRTG","SSIA","SSMS","STAR","STTP","SUGI",
-"SULI","SUMI","SURI","TALF","TAXI","TBIG","TBLA","TBSL","TBMS","TCID","TEBE","TELE","TFCO",
-"TIFA","TINS","TLKM","TMAS","TOTO","TOWR","TOYS","TPIA","TRAM","TRIM","TRIN","TRIS","TRJA",
-"TRST","TRUK","TRUS","TRYP","TSPC","ULTJ","UNIQ","UNSP","UNTR","UNVR","VICI","VICO","VINS",
-"VIVA","WEGE","WICO","WIKA","WINS","WOOD","WOMF","WSBP","WSKT","WTON","YULE","ZBRA"
-]
+# ======================================================
+# PAGE CONFIG
+# ======================================================
+st.set_page_config(
+    page_title="BSJP Screener Premium",
+    page_icon="📈",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
 
-# =========================
+# ======================================================
+# DEFAULT WATCHLIST
+# ======================================================
+DEFAULT_WATCHLIST = """
+AALI.JK,ACES.JK,ADHI.JK,ADMR.JK,ADRO.JK,AKRA.JK,AMMN.JK,ANTM.JK,ARTO.JK,ASII.JK,
+BBCA.JK,BBNI.JK,BBRI.JK,BBTN.JK,BBYB.JK,BMRI.JK,BRIS.JK,BRMS.JK,BRPT.JK,BSDE.JK,
+BUKA.JK,BUMI.JK,CPIN.JK,CTRA.JK,DOID.JK,ELSA.JK,EMTK.JK,ERAA.JK,ESSA.JK,EXCL.JK,
+GOTO.JK,HRUM.JK,ICBP.JK,INCO.JK,INDF.JK,INDY.JK,INKP.JK,INTP.JK,ISAT.JK,ITMG.JK,
+JPFA.JK,JSMR.JK,KLBF.JK,MAPI.JK,MDKA.JK,MEDC.JK,MIKA.JK,MYOR.JK,NCKL.JK,PGAS.JK,
+PTBA.JK,PTPP.JK,PWON.JK,RAJA.JK,SCMA.JK,SIDO.JK,SMDR.JK,SMGR.JK,SMRA.JK,TINS.JK,
+TKIM.JK,TLKM.JK,TOBA.JK,TOWR.JK,UNTR.JK,UNVR.JK,WIKA.JK
+"""
+
+MIN_VALUE = 1_000_000_000
+MIN_VOLUME = 500_000
+
+# ======================================================
+# CSS PREMIUM
+# ======================================================
+st.markdown("""
+<style>
+.stApp {
+    background: #050d18;
+    color: #e8eef7;
+}
+
+.block-container {
+    max-width: 1600px;
+    padding-top: 1rem;
+    padding-left: 1rem;
+    padding-right: 1rem;
+}
+
+[data-testid="stSidebar"] {
+    background: linear-gradient(180deg, #06101d 0%, #071827 100%);
+    border-right: 1px solid #112b47;
+}
+
+[data-testid="stSidebar"] * {
+    color: #f2f7ff;
+}
+
+.sidebar-logo {
+    padding: 18px 10px 16px 10px;
+    border-bottom: 1px solid #173a5b;
+    margin-bottom: 14px;
+}
+
+.logo-title {
+    font-size: 33px;
+    font-weight: 900;
+    letter-spacing: 1px;
+    line-height: 1;
+}
+
+.logo-sub {
+    color: #2bd4ff;
+    font-weight: 900;
+    letter-spacing: 4px;
+    font-size: 14px;
+}
+
+.menu-item {
+    padding: 11px 14px;
+    border-radius: 10px;
+    margin: 5px 0;
+    font-size: 14px;
+    color: #c8d6e8;
+    background: transparent;
+}
+
+.menu-active {
+    background: linear-gradient(90deg, #1557d6, #1767f2);
+    color: white;
+    font-weight: 800;
+}
+
+.side-card {
+    background: #0b1d31;
+    border: 1px solid #173a5b;
+    border-radius: 14px;
+    padding: 14px;
+    margin-top: 14px;
+}
+
+.top-header {
+    background: linear-gradient(145deg, #081626, #07111f);
+    border: 1px solid #173a5b;
+    border-radius: 16px;
+    padding: 16px 18px;
+    box-shadow: 0 10px 24px rgba(0,0,0,.25);
+}
+
+.title-main {
+    font-size: 25px;
+    font-weight: 900;
+    color: #f4f8ff;
+}
+
+.market-green {
+    color: #22e57b;
+    font-weight: 800;
+}
+
+.market-red {
+    color: #ff5b5b;
+    font-weight: 800;
+}
+
+.card {
+    background: linear-gradient(145deg, #0b1d31, #081626);
+    border: 1px solid #173a5b;
+    border-radius: 16px;
+    padding: 18px;
+    min-height: 112px;
+    box-shadow: 0 10px 24px rgba(0,0,0,.25);
+}
+
+.card-small {
+    background: linear-gradient(145deg, #0b1d31, #081626);
+    border: 1px solid #173a5b;
+    border-radius: 16px;
+    padding: 17px;
+    min-height: 280px;
+}
+
+.metric-title {
+    color: #a9b8cc;
+    font-size: 13px;
+    font-weight: 800;
+}
+
+.metric-value {
+    font-size: 30px;
+    font-weight: 900;
+    margin-top: 6px;
+}
+
+.green { color: #22e57b; font-weight: 900; }
+.blue { color: #2d95ff; font-weight: 900; }
+.yellow { color: #ffc928; font-weight: 900; }
+.red { color: #ff5050; font-weight: 900; }
+.gray { color: #a9b8cc; }
+
+.filter-box {
+    background: #0b1d31;
+    border: 1px solid #173a5b;
+    border-radius: 14px;
+    padding: 14px;
+}
+
+.stButton > button {
+    width: 100%;
+    border-radius: 10px;
+    background: linear-gradient(90deg, #1557d6, #2d95ff);
+    color: white;
+    font-weight: 900;
+    border: 0;
+}
+
+.stButton > button:hover {
+    border: 0;
+    background: linear-gradient(90deg, #2d95ff, #1557d6);
+}
+
+input, textarea, select {
+    background-color: #ffffff !important;
+    color: #111827 !important;
+    border-radius: 10px !important;
+}
+
+/* Premium dataframe look */
+[data-testid="stDataFrame"] {
+    border: 1px solid #173a5b;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 10px 24px rgba(0,0,0,.25);
+}
+
+#MainMenu {
+    visibility: hidden;
+}
+footer {
+    visibility: hidden;
+}
+</style>
+""", unsafe_allow_html=True)
+
+# ======================================================
+# SIDEBAR
+# ======================================================
+with st.sidebar:
+    st.markdown("""
+    <div class="sidebar-logo">
+        <div class="logo-title">📈 BSJP</div>
+        <div class="logo-sub">SCREENER</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    menu_items = [
+        "🏠 Dashboard",
+        "🔍 Screener",
+        "🎯 Kandidat Entry",
+        "👁️ Saham Pantau",
+        "🔔 Alert",
+        "⭐ Watchlist",
+        "📊 Top Volume",
+        "🌐 Market Summary",
+        "⚙️ Pengaturan",
+        "📖 Panduan",
+    ]
+
+    for i, item in enumerate(menu_items):
+        cls = "menu-item menu-active" if i == 0 else "menu-item"
+        st.markdown(f"<div class='{cls}'>{item}</div>", unsafe_allow_html=True)
+
+    st.markdown("---")
+    st.markdown("### ⚙️ Pengaturan")
+
+    period = st.selectbox("Periode", ["3mo", "6mo", "1y"], index=1)
+    interval = st.selectbox("Interval", ["1d", "1h", "30m", "15m"], index=0)
+
+    auto_refresh = st.checkbox("Auto Refresh", value=False)
+    refresh_seconds = st.selectbox("Refresh tiap", [30, 60, 120, 300], index=1)
+
+    max_price = st.number_input(
+        "Harga saham maksimal",
+        min_value=50,
+        max_value=100000,
+        value=1000,
+        step=50
+    )
+
+    max_result = st.number_input(
+        "Hasil utama Top N",
+        min_value=5,
+        max_value=100,
+        value=30,
+        step=5
+    )
+
+    watchlist_input = st.text_area(
+        "Daftar saham watchlist",
+        value=DEFAULT_WATCHLIST.strip(),
+        height=120
+    )
+
+    st.markdown("---")
+    st.markdown("### 🤖 Telegram Bot")
+
+    telegram_enabled = st.checkbox("Aktifkan notifikasi Telegram", value=False)
+    bot_token = st.text_input("Bot Token", type="password")
+    chat_id = st.text_input("Chat ID")
+    telegram_top_n = st.number_input("Kirim Top N", min_value=1, max_value=30, value=5, step=1)
+    send_only_strong = st.checkbox("Kirim hanya alert kuat", value=True)
+    test_telegram = st.button("Tes Kirim Telegram", disabled=not telegram_enabled)
+
+    st.markdown("---")
+    st.markdown("### 🔎 Search Emiten Mandiri")
+
+    manual_symbol = st.text_input("Masukkan emiten", placeholder="Contoh: BBCA atau GOTO")
+    search_mode = st.radio(
+        "Mode pencarian",
+        ["Tambahkan ke watchlist", "Analisa emiten ini saja"],
+        index=0
+    )
+
+    run_screener = st.button("Jalankan Screener")
+
+    st.markdown(f"""
+    <div class="side-card">
+        <b>🔔 Alert Telegram</b><br>
+        <span style="font-size:13px;color:#b7c6d8;">
+        Dapatkan notifikasi sinyal BSJP KUAT langsung ke Telegram Anda.
+        </span>
+    </div>
+    <div class="side-card">
+        <b>Auto Refresh</b><br><br>
+        Interval: <b>{refresh_seconds} detik</b><br>
+        Filter harga: <b>{max_price}</b><br>
+        Limit hasil: <b>{max_result}</b>
+    </div>
+    """, unsafe_allow_html=True)
+
+if auto_refresh:
+    st.markdown(f"<meta http-equiv='refresh' content='{refresh_seconds}'>", unsafe_allow_html=True)
+
+# ======================================================
 # HELPERS
-# =========================
-def safe_div(a, b):
+# ======================================================
+def now_jakarta():
+    if ZoneInfo is not None:
+        return datetime.now(ZoneInfo("Asia/Jakarta"))
+    return datetime.now()
+
+def normalize_watchlist(text):
+    tickers = [x.strip().upper() for x in text.replace("\n", ",").split(",") if x.strip()]
+    tickers = [x if x.endswith(".JK") else f"{x}.JK" for x in tickers]
+    return list(dict.fromkeys(tickers))
+
+def send_telegram_message(token, chat, message):
     try:
-        if b == 0 or pd.isna(b):
-            return np.nan
-        return a / b
-    except:
-        return np.nan
+        if not token or not chat:
+            return False, "Bot Token atau Chat ID belum diisi."
+        url = f"https://api.telegram.org/bot{token}/sendMessage"
+        payload = {"chat_id": chat, "text": message, "parse_mode": "HTML"}
+        r = requests.post(url, data=payload, timeout=10)
+        if r.status_code == 200:
+            return True, "Telegram berhasil dikirim."
+        return False, r.text
+    except Exception as e:
+        return False, str(e)
 
-def fmt_num(x, digits=2):
-    if pd.isna(x):
-        return "-"
-    return f"{x:,.{digits}f}"
+def rsi(series, period=14):
+    delta = series.diff()
+    gain = delta.clip(lower=0)
+    loss = -delta.clip(upper=0)
+    avg_gain = gain.rolling(period).mean()
+    avg_loss = loss.rolling(period).mean()
+    rs = avg_gain / avg_loss.replace(0, np.nan)
+    return 100 - (100 / (1 + rs))
 
-def fmt_int(x):
-    if pd.isna(x):
-        return "-"
-    return f"{int(x):,}"
+def macd(close):
+    ema12 = close.ewm(span=12, adjust=False).mean()
+    ema26 = close.ewm(span=26, adjust=False).mean()
+    macd_line = ema12 - ema26
+    signal = macd_line.ewm(span=9, adjust=False).mean()
+    hist = macd_line - signal
+    return macd_line, signal, hist
 
-def human_value(x):
-    if pd.isna(x):
+def rupiah_short(x):
+    try:
+        x = float(x)
+    except Exception:
         return "-"
-    x = float(x)
     if x >= 1_000_000_000_000:
         return f"{x/1_000_000_000_000:.2f} T"
     if x >= 1_000_000_000:
@@ -92,447 +364,564 @@ def human_value(x):
         return f"{x/1_000_000:.2f} M"
     return f"{x:,.0f}"
 
-def normalize_symbols(text):
-    raw = [x.strip().upper() for x in text.replace("\n", ",").split(",") if x.strip()]
-    out = []
-    for s in raw:
-        if not s.endswith(".JK"):
-            s = s + ".JK"
-        out.append(s)
-    return list(dict.fromkeys(out))
+def volume_short(x):
+    try:
+        x = float(x)
+    except Exception:
+        return "-"
+    if x >= 1_000_000_000:
+        return f"{x/1_000_000_000:.2f} B"
+    if x >= 1_000_000:
+        return f"{x/1_000_000:.1f} M"
+    if x >= 1_000:
+        return f"{x/1_000:.1f} K"
+    return f"{x:,.0f}"
 
-def download_one(symbol, period="6mo", interval="1d"):
+# ======================================================
+# WATCHLIST LOGIC
+# ======================================================
+watchlist = normalize_watchlist(watchlist_input)
+
+if manual_symbol:
+    manual_symbol = manual_symbol.strip().upper()
+    manual_symbol = manual_symbol if manual_symbol.endswith(".JK") else f"{manual_symbol}.JK"
+    if search_mode == "Tambahkan ke watchlist":
+        if manual_symbol not in watchlist:
+            watchlist.append(manual_symbol)
+    else:
+        watchlist = [manual_symbol]
+
+# ======================================================
+# BSJP ENGINE
+# ======================================================
+def calculate_bsjp(ticker, period="6mo", interval="1d"):
     try:
         df = yf.download(
-            symbol,
+            ticker,
             period=period,
             interval=interval,
-            auto_adjust=False,
             progress=False,
+            auto_adjust=False,
             threads=False
         )
-        if df is None or df.empty:
+
+        if df is None or df.empty or len(df) < 60:
             return None
 
-        # Handle possible multiindex columns
         if isinstance(df.columns, pd.MultiIndex):
-            df.columns = [c[0] for c in df.columns]
+            df.columns = df.columns.get_level_values(0)
 
-        needed = ["Open", "High", "Low", "Close", "Volume"]
-        for c in needed:
-            if c not in df.columns:
+        needed = ["Close", "High", "Low", "Volume"]
+        for col in needed:
+            if col not in df.columns:
                 return None
 
-        df = df[needed].copy()
-        df.dropna(inplace=True)
+        df = df[needed].dropna()
 
-        if len(df) < 40:
+        if len(df) < 60:
             return None
 
-        return df
-    except:
-        return None
+        close = pd.to_numeric(df["Close"], errors="coerce")
+        high = pd.to_numeric(df["High"], errors="coerce")
+        low = pd.to_numeric(df["Low"], errors="coerce")
+        volume = pd.to_numeric(df["Volume"], errors="coerce")
 
-def compute_features(df):
-    d = df.copy()
+        last_close = float(close.iloc[-1])
+        prev_close = float(close.iloc[-2])
+        if prev_close <= 0 or last_close <= 0:
+            return None
 
-    d["Value"] = d["Close"] * d["Volume"]
-    d["AvgVol20"] = d["Volume"].rolling(20).mean()
-    d["AvgVal20"] = d["Value"].rolling(20).mean()
-    d["RVOL"] = d["Volume"] / d["AvgVol20"]
+        change_pct = ((last_close - prev_close) / prev_close) * 100
 
-    d["EMA10"] = d["Close"].ewm(span=10, adjust=False).mean()
-    d["EMA20"] = d["Close"].ewm(span=20, adjust=False).mean()
-    d["EMA50"] = d["Close"].ewm(span=50, adjust=False).mean()
+        ma20 = close.rolling(20).mean()
+        ma50 = close.rolling(50).mean()
+        rsi_val = rsi(close)
+        macd_line, macd_signal, macd_hist = macd(close)
 
-    d["HH20"] = d["High"].rolling(20).max()
-    d["LL20"] = d["Low"].rolling(20).min()
+        if pd.isna(ma20.iloc[-1]) or pd.isna(ma50.iloc[-1]) or pd.isna(rsi_val.iloc[-1]):
+            return None
 
-    tr1 = d["High"] - d["Low"]
-    tr2 = (d["High"] - d["Close"].shift(1)).abs()
-    tr3 = (d["Low"] - d["Close"].shift(1)).abs()
-    d["TR"] = pd.concat([tr1, tr2, tr3], axis=1).max(axis=1)
-    d["ATR14"] = d["TR"].rolling(14).mean()
+        avg_vol20 = volume.rolling(20).mean()
+        avg_vol_last = float(avg_vol20.iloc[-1]) if not pd.isna(avg_vol20.iloc[-1]) else 0
+        rvol = float(volume.iloc[-1] / avg_vol_last) if avg_vol_last > 0 else 0
+        value = last_close * float(volume.iloc[-1])
 
-    # Money Flow sederhana
-    mf_mult = ((d["Close"] - d["Low"]) - (d["High"] - d["Close"])) / (d["High"] - d["Low"]).replace(0, np.nan)
-    mf_mult = mf_mult.replace([np.inf, -np.inf], np.nan).fillna(0)
-    d["MFV"] = mf_mult * d["Volume"]
-    d["ADL"] = d["MFV"].cumsum()
-    d["ADL_Slope5"] = d["ADL"].diff(5)
+        support = float(low.tail(20).min())
+        resistance = float(high.tail(20).max())
+        breakout = resistance
 
-    # OBV
-    direction = np.sign(d["Close"].diff()).fillna(0)
-    d["OBV"] = (direction * d["Volume"]).cumsum()
-    d["OBV_Slope5"] = d["OBV"].diff(5)
+        stop_loss = support * 0.985
+        target1 = resistance
+        target2 = resistance + (resistance - support)
 
-    # Posisi close dalam range harian
-    d["ClosePos"] = (d["Close"] - d["Low"]) / (d["High"] - d["Low"]).replace(0, np.nan)
+        risk = max(last_close - stop_loss, 1)
+        reward = max(target1 - last_close, 0)
+        rr = reward / risk if risk > 0 else 0
 
-    # Distance to breakout
-    d["PrevHH20"] = d["High"].shift(1).rolling(20).max()
-    d["BreakoutPct"] = ((d["Close"] / d["PrevHH20"]) - 1) * 100
+        entry_low = support * 1.01
+        entry_high = last_close
 
-    return d
+        latest_rsi = float(rsi_val.iloc[-1])
+        prev_rsi = float(rsi_val.iloc[-2])
+        latest_hist = float(macd_hist.iloc[-1])
+        prev_hist = float(macd_hist.iloc[-2])
 
-def score_accumulation(d):
-    last = d.iloc[-1]
-    prev = d.iloc[-2]
+        score = 0
+        reasons = []
 
-    score = 0
-    notes = []
-
-    # 1) RVOL
-    rvol = last["RVOL"]
-    if pd.notna(rvol):
-        if rvol >= 3.0:
-            score += 30
-            notes.append("RVOL sangat tinggi")
-        elif rvol >= 2.0:
-            score += 22
-            notes.append("RVOL tinggi")
-        elif rvol >= 1.5:
-            score += 14
-            notes.append("RVOL di atas normal")
-
-    # 2) Nilai transaksi
-    val = last["Value"]
-    if pd.notna(val):
-        if val >= 50_000_000_000:
-            score += 15
-            notes.append("nilai transaksi besar")
-        elif val >= 20_000_000_000:
+        # Trend & structure
+        if last_close > ma20.iloc[-1] and last_close > ma50.iloc[-1]:
             score += 10
-            notes.append("nilai transaksi cukup")
-        elif val >= 10_000_000_000:
+            reasons.append("Harga di atas MA20 & MA50")
+        if ma20.iloc[-1] > ma50.iloc[-1]:
+            score += 5
+            reasons.append("MA20 > MA50")
+        if low.iloc[-1] >= low.tail(10).min():
+            score += 5
+            reasons.append("Tidak membuat low baru")
+        if resistance > 0 and 0 <= ((resistance - last_close) / last_close) <= 0.03:
+            score += 5
+            reasons.append("Dekat breakout")
+
+        # Volume & accumulation
+        if rvol > 1.5:
+            score += 8
+            reasons.append("RVOL tinggi")
+        if volume.iloc[-1] > avg_vol_last:
             score += 6
-            notes.append("nilai transaksi lumayan")
-
-    # 3) Struktur harga
-    if last["Close"] > last["EMA20"]:
-        score += 8
-        notes.append("close di atas EMA20")
-    if last["EMA20"] > last["EMA50"]:
-        score += 8
-        notes.append("EMA20 di atas EMA50")
-    if last["Close"] > prev["Close"]:
-        score += 6
-        notes.append("harga menguat")
-    if pd.notna(last["ClosePos"]) and last["ClosePos"] >= 0.7:
-        score += 8
-        notes.append("close dekat high")
-
-    # 4) Akumulasi flow
-    if pd.notna(last["ADL_Slope5"]) and last["ADL_Slope5"] > 0:
-        score += 8
-        notes.append("arus akumulasi positif")
-    if pd.notna(last["OBV_Slope5"]) and last["OBV_Slope5"] > 0:
-        score += 7
-        notes.append("OBV naik")
-
-    # 5) Dekat breakout
-    if pd.notna(last["BreakoutPct"]):
-        if -2.0 <= last["BreakoutPct"] <= 2.0:
-            score += 10
-            notes.append("dekat area breakout")
-        elif last["BreakoutPct"] > 2.0:
+            reasons.append("Volume naik")
+        if value >= MIN_VALUE:
+            score += 5
+            reasons.append("Value likuid")
+        if last_close > prev_close and volume.iloc[-1] > volume.iloc[-2]:
             score += 6
-            notes.append("sudah lepas breakout")
+            reasons.append("Candle naik + volume")
 
-    # Penalti
-    if last["Close"] < last["EMA50"]:
-        score -= 10
-    if pd.notna(rvol) and rvol < 1:
-        score -= 10
+        # Momentum
+        if 45 <= latest_rsi <= 68:
+            score += 7
+            reasons.append("RSI sehat")
+        if latest_rsi > prev_rsi:
+            score += 4
+            reasons.append("RSI naik")
+        if latest_hist > prev_hist:
+            score += 5
+            reasons.append("MACD membaik")
+        if macd_line.iloc[-1] > macd_signal.iloc[-1]:
+            score += 4
+            reasons.append("MACD bullish")
 
-    # Label
-    if score >= 75:
-        grade = "A"
-    elif score >= 60:
-        grade = "B"
-    elif score >= 45:
-        grade = "C"
-    else:
-        grade = "D"
+        # Risk reward
+        if rr >= 2:
+            score += 8
+            reasons.append("RR bagus")
+        if abs(last_close - support) / last_close <= 0.08:
+            score += 4
+            reasons.append("Support dekat")
+        if abs(last_close - support) / last_close <= 0.10:
+            score += 4
+            reasons.append("Entry dekat support")
+        if target1 > last_close:
+            score += 4
+            reasons.append("Target realistis")
 
-    return score, grade, ", ".join(notes[:5])
+        # Anti FOMO
+        gain_3d = ((last_close - close.iloc[-4]) / close.iloc[-4]) * 100 if len(close) > 4 and close.iloc[-4] > 0 else 0
 
-def build_trade_plan(d):
-    last = d.iloc[-1]
-    prev_hh20 = last["PrevHH20"]
-    atr = last["ATR14"]
-    close = last["Close"]
-    low = last["Low"]
-    ema20 = last["EMA20"]
+        if gain_3d <= 8:
+            score += 4
+            reasons.append("Tidak FOMO")
+        if latest_rsi < 75:
+            score += 3
+            reasons.append("Tidak overbought")
+        if abs(last_close - ma20.iloc[-1]) / last_close <= 0.08:
+            score += 3
+            reasons.append("Dekat MA20")
 
-    buy_zone_low = min(close, prev_hh20) if pd.notna(prev_hh20) else close
-    buy_zone_high = max(close, prev_hh20) if pd.notna(prev_hh20) else close
+        score = int(min(score, 100))
 
-    if pd.notna(atr):
-        stop_loss = min(low, ema20) - (0.3 * atr)
-        take_profit_1 = close + (1.0 * atr)
-        take_profit_2 = close + (2.0 * atr)
-    else:
-        stop_loss = min(low, ema20) * 0.97
-        take_profit_1 = close * 1.05
-        take_profit_2 = close * 1.10
+        trend = "UP" if last_close > ma20.iloc[-1] > ma50.iloc[-1] else "SIDEWAYS" if last_close >= ma50.iloc[-1] else "DOWN"
+        macd_status = "Bullish" if macd_line.iloc[-1] > macd_signal.iloc[-1] else "Bearish"
 
-    risk_pct = ((close - stop_loss) / close) * 100 if close and stop_loss else np.nan
-    upside_pct = ((take_profit_2 - close) / close) * 100 if close and take_profit_2 else np.nan
+        if (
+            score >= 80 and rvol >= 1.5 and 45 <= latest_rsi <= 68
+            and latest_hist > prev_hist and last_close > ma20.iloc[-1]
+            and rr >= 2 and latest_rsi < 75
+        ):
+            status = "BSJP KUAT"
+        elif (
+            score >= 70 and rvol >= 1.2 and 40 <= latest_rsi <= 70
+            and trend in ["UP", "SIDEWAYS"] and rr >= 1.8
+        ):
+            status = "BSJP SIAP"
+        elif score >= 60:
+            status = "PANTAU"
+        else:
+            status = "TUNGGU"
 
-    return {
-        "Entry Zone": f"{buy_zone_low:.0f} - {buy_zone_high:.0f}",
-        "Stop Loss": round(stop_loss, 2) if pd.notna(stop_loss) else np.nan,
-        "TP1": round(take_profit_1, 2) if pd.notna(take_profit_1) else np.nan,
-        "TP2": round(take_profit_2, 2) if pd.notna(take_profit_2) else np.nan,
-        "Risk %": round(risk_pct, 2) if pd.notna(risk_pct) else np.nan,
-        "Upside %": round(upside_pct, 2) if pd.notna(upside_pct) else np.nan,
-    }
+        if latest_rsi > 75 or value < MIN_VALUE or volume.iloc[-1] < MIN_VOLUME or rr < 1.2 or gain_3d > 15:
+            status = "TUNGGU"
 
-def analyze_symbol(symbol):
-    df = download_one(symbol)
-    if df is None:
+        return {
+            "Kode": ticker.replace(".JK", ""),
+            "Harga": round(last_close, 0),
+            "Chg %": round(change_pct, 2),
+            "Volume": int(volume.iloc[-1]),
+            "RVOL": round(rvol, 2),
+            "Value": value,
+            "RSI": round(latest_rsi, 1),
+            "MACD": macd_status,
+            "MA20/MA50": "✅ / ✅" if last_close > ma20.iloc[-1] and last_close > ma50.iloc[-1] else "❌ / ❌",
+            "Trend": trend,
+            "Breakout": round(breakout, 0),
+            "Support": round(support, 0),
+            "Resistance": round(resistance, 0),
+            "Score": score,
+            "Status": status,
+            "Entry Area": f"{entry_low:,.0f} - {entry_high:,.0f}",
+            "SL": round(stop_loss, 0),
+            "Target 1": round(target1, 0),
+            "Target 2": round(target2, 0),
+            "Risk/Reward": round(rr, 2),
+            "Alasan Sinyal": ", ".join(reasons[:6])
+        }
+
+    except Exception:
         return None
 
-    d = compute_features(df)
-    if d is None or len(d) < 30:
-        return None
-
-    last = d.iloc[-1]
-    prev = d.iloc[-2]
-    score, grade, notes = score_accumulation(d)
-    plan = build_trade_plan(d)
-
-    price = float(last["Close"])
-    chg_pct = ((last["Close"] / prev["Close"]) - 1) * 100 if prev["Close"] else np.nan
-    breakout_level = float(last["PrevHH20"]) if pd.notna(last["PrevHH20"]) else np.nan
-    support = float(d["Low"].tail(10).min())
-    resistance = float(d["High"].tail(10).max())
-
-    return {
-        "Ticker": symbol.replace(".JK", ""),
-        "Price": round(price, 2),
-        "Change %": round(chg_pct, 2) if pd.notna(chg_pct) else np.nan,
-        "Volume": float(last["Volume"]),
-        "Avg Vol 20": float(last["AvgVol20"]) if pd.notna(last["AvgVol20"]) else np.nan,
-        "RVOL": round(float(last["RVOL"]), 2) if pd.notna(last["RVOL"]) else np.nan,
-        "Value": float(last["Value"]) if pd.notna(last["Value"]) else np.nan,
-        "EMA20": round(float(last["EMA20"]), 2) if pd.notna(last["EMA20"]) else np.nan,
-        "EMA50": round(float(last["EMA50"]), 2) if pd.notna(last["EMA50"]) else np.nan,
-        "ATR14": round(float(last["ATR14"]), 2) if pd.notna(last["ATR14"]) else np.nan,
-        "Breakout Lv": round(breakout_level, 2) if pd.notna(breakout_level) else np.nan,
-        "Support": round(support, 2) if pd.notna(support) else np.nan,
-        "Resistance": round(resistance, 2) if pd.notna(resistance) else np.nan,
-        "Entry Zone": plan["Entry Zone"],
-        "Stop Loss": plan["Stop Loss"],
-        "TP1": plan["TP1"],
-        "TP2": plan["TP2"],
-        "Risk %": plan["Risk %"],
-        "Upside %": plan["Upside %"],
-        "Score": score,
-        "Grade": grade,
-        "Signal": "AKUMULASI" if score >= 60 else ("PANTAU" if score >= 45 else "LEWATI"),
-        "Notes": notes
-    }
-
-def style_dataframe(df):
-    def color_signal(v):
-        if v == "AKUMULASI":
-            return "background-color: #123524; color: #7CFC98; font-weight: bold;"
-        elif v == "PANTAU":
-            return "background-color: #3b2f0b; color: #ffd966; font-weight: bold;"
-        return "background-color: #3a0f10; color: #ff8080;"
-
-    def color_grade(v):
-        if v == "A":
-            return "background-color: #123524; color: #7CFC98; font-weight: bold;"
-        elif v == "B":
-            return "background-color: #1a2f4f; color: #9fd3ff; font-weight: bold;"
-        elif v == "C":
-            return "background-color: #3b2f0b; color: #ffd966; font-weight: bold;"
-        return "background-color: #3a0f10; color: #ff8080;"
-
-    def color_rvol(v):
-        if pd.isna(v):
-            return ""
-        if v >= 3:
-            return "background-color: #0b3d2e; color: #7CFC98; font-weight: bold;"
-        elif v >= 2:
-            return "background-color: #173f5f; color: #9fd3ff; font-weight: bold;"
-        elif v >= 1.5:
-            return "background-color: #4b3b12; color: #ffd966;"
-        return ""
-
-    def color_score(v):
-        if pd.isna(v):
-            return ""
-        if v >= 75:
-            return "background-color: #123524; color: #7CFC98; font-weight: bold;"
-        elif v >= 60:
-            return "background-color: #173f5f; color: #9fd3ff; font-weight: bold;"
-        elif v >= 45:
-            return "background-color: #4b3b12; color: #ffd966;"
-        return "background-color: #3a0f10; color: #ff8080;"
-
-    def color_change(v):
-        if pd.isna(v):
-            return ""
-        if v > 0:
-            return "color: #7CFC98; font-weight: bold;"
-        elif v < 0:
-            return "color: #ff8080; font-weight: bold;"
-        return ""
-
-    styler = (
-        df.style
-        .map(color_signal, subset=["Signal"])
-        .map(color_grade, subset=["Grade"])
-        .map(color_rvol, subset=["RVOL"])
-        .map(color_score, subset=["Score"])
-        .map(color_change, subset=["Change %"])
-        .format({
-            "Price": "{:,.2f}",
-            "Change %": "{:,.2f}",
-            "Volume": lambda x: human_value(x),
-            "Avg Vol 20": lambda x: human_value(x),
-            "RVOL": "{:,.2f}",
-            "Value": lambda x: human_value(x),
-            "EMA20": "{:,.2f}",
-            "EMA50": "{:,.2f}",
-            "ATR14": "{:,.2f}",
-            "Breakout Lv": "{:,.2f}",
-            "Support": "{:,.2f}",
-            "Resistance": "{:,.2f}",
-            "Stop Loss": "{:,.2f}",
-            "TP1": "{:,.2f}",
-            "TP2": "{:,.2f}",
-            "Risk %": "{:,.2f}",
-            "Upside %": "{:,.2f}",
-            "Score": "{:,.0f}"
-        })
-    )
-    return styler
-
-# =========================
-# UI
-# =========================
-st.title("📈 Screener Saham Akumulasi - RVOL Tinggi")
-st.caption("Mencari saham dengan indikasi akumulasi: RVOL tinggi, harga kuat, arus volume positif, dan area masuk yang lebih jelas.")
-
-col1, col2, col3, col4 = st.columns([2, 1, 1, 1])
-
-with col1:
-    symbols_text = st.text_area(
-        "Daftar saham (pisahkan dengan koma, otomatis tambah .JK)",
-        value=",".join([s.replace(".JK", "") for s in DEFAULT_SYMBOLS]),
-        height=140
-    )
-
-with col2:
-    min_rvol = st.number_input("Min RVOL", min_value=0.5, max_value=10.0, value=1.5, step=0.1)
-    min_score = st.number_input("Min Score", min_value=0, max_value=100, value=45, step=1)
-
-with col3:
-    min_value_b = st.number_input("Min Nilai Transaksi (B)", min_value=0.0, max_value=500.0, value=10.0, step=1.0)
-    only_above_ema20 = st.checkbox("Hanya > EMA20", value=True)
-
-with col4:
-    top_n = st.number_input("Top N", min_value=5, max_value=200, value=25, step=5)
-    auto_sort = st.selectbox("Urutkan", ["Score", "RVOL", "Value", "Change %"], index=0)
-
-run_scan = st.button("🔍 Scan Saham", use_container_width=True)
-
-if run_scan:
-    symbols = normalize_symbols(symbols_text)
-    if not symbols:
-        st.warning("Masukkan minimal 1 saham.")
-        st.stop()
-
-    progress = st.progress(0)
-    status = st.empty()
+@st.cache_data(ttl=300, show_spinner=False)
+def scan_market(tickers, period, interval):
     rows = []
-
-    for i, sym in enumerate(symbols):
-        status.info(f"Scanning {sym} ... ({i+1}/{len(symbols)})")
-        result = analyze_symbol(sym)
-        if result:
+    for ticker in tickers:
+        result = calculate_bsjp(ticker, period, interval)
+        if result is not None:
             rows.append(result)
-        progress.progress((i + 1) / len(symbols))
-
-    status.empty()
-    progress.empty()
 
     if not rows:
-        st.error("Tidak ada data yang berhasil diambil.")
-        st.stop()
+        return pd.DataFrame()
 
     df = pd.DataFrame(rows)
+    df = df.sort_values("Score", ascending=False).reset_index(drop=True)
+    df.insert(0, "Rank", df.index + 1)
+    return df
 
-    # Filter
-    df = df[df["RVOL"] >= min_rvol]
-    df = df[df["Score"] >= min_score]
-    df = df[df["Value"] >= (min_value_b * 1_000_000_000)]
+# ======================================================
+# HEADER
+# ======================================================
+now = now_jakarta()
+market_open = time(9, 0) <= now.time() <= time(16, 15) and now.weekday() < 5
+market_text = "Market Open" if market_open else "Market Closed"
 
-    if only_above_ema20:
-        df = df[df["Price"] > df["EMA20"]]
+st.markdown(f"""
+<div class="top-header">
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div>
+            <span class="title-main">DASHBOARD BSJP SCREENER</span>
+            &nbsp;&nbsp;
+            <span class="{'market-green' if market_open else 'market-red'}">● {market_text}</span>
+        </div>
+        <div class="gray">
+            📅 {now.strftime('%A, %d %B %Y')} &nbsp; | &nbsp; {now.strftime('%H:%M')} WIB
+        </div>
+    </div>
+</div>
+""", unsafe_allow_html=True)
 
-    if df.empty:
-        st.warning("Tidak ada saham yang lolos filter.")
-        st.stop()
+st.write("")
 
-    df = df.sort_values(by=auto_sort, ascending=False).head(int(top_n)).reset_index(drop=True)
-    df.index = df.index + 1
-
-    # Ringkasan
-    c1, c2, c3, c4 = st.columns(4)
-    c1.metric("Jumlah Lolos", len(df))
-    c2.metric("Rata-rata RVOL", f"{df['RVOL'].mean():.2f}")
-    c3.metric("Rata-rata Score", f"{df['Score'].mean():.1f}")
-    c4.metric("Waktu Scan", datetime.now().strftime("%H:%M:%S"))
-
-    st.subheader("Tabel Screener Akumulasi")
-    show_cols = [
-        "Ticker", "Signal", "Grade", "Score", "Price", "Change %",
-        "RVOL", "Value", "Volume", "Avg Vol 20",
-        "EMA20", "EMA50", "Breakout Lv", "Support", "Resistance",
-        "Entry Zone", "Stop Loss", "TP1", "TP2", "Risk %", "Upside %",
-        "Notes"
-    ]
-    st.dataframe(
-        style_dataframe(df[show_cols]),
-        use_container_width=True,
-        height=700
+if test_telegram:
+    ok, msg = send_telegram_message(
+        bot_token,
+        chat_id,
+        "✅ <b>Test Telegram Berhasil</b>\n\nBot BSJP Screener sudah terhubung."
     )
+    if ok:
+        st.sidebar.success(msg)
+    else:
+        st.sidebar.error(msg)
 
-    st.subheader("Top Kandidat Akumulasi")
-    top_df = df.head(5)[["Ticker", "Signal", "Grade", "Score", "RVOL", "Value", "Entry Zone", "Stop Loss", "TP1", "TP2", "Notes"]]
-    st.dataframe(style_dataframe(top_df), use_container_width=True, height=260)
+# ======================================================
+# SCAN DATA
+# ======================================================
+try:
+    with st.spinner("Sedang scan saham IDX..."):
+        df = scan_market(watchlist, period, interval)
+except Exception as e:
+    st.error(f"Error saat scan data: {e}")
+    st.stop()
 
-    csv = df.to_csv(index=False).encode("utf-8-sig")
-    st.download_button(
-        "⬇️ Download hasil CSV",
-        data=csv,
-        file_name="screener_akumulasi_rvol.csv",
-        mime="text/csv",
-        use_container_width=True
-    )
+if df.empty:
+    st.error("Data belum tersedia. Coba pilih interval 1d, periode 6mo/1y, atau kurangi watchlist.")
+    st.stop()
 
-with st.expander("Cara baca tabel"):
-    st.markdown("""
-**Makna kolom penting:**
+filtered_base = df[df["Harga"] <= max_price].copy()
 
-- **RVOL**: volume hari ini dibanding rata-rata 20 hari. Semakin tinggi, semakin menarik.
-- **Value**: nilai transaksi. Membantu lihat apakah volume benar-benar bermakna.
-- **Score**: skor gabungan untuk menilai potensi akumulasi.
-- **Signal**:
-  - **AKUMULASI** = kandidat paling menarik
-  - **PANTAU** = menarik, tapi belum kuat
-  - **LEWATI** = belum layak fokus
-- **Breakout Lv**: area high 20 hari sebelumnya.
-- **Entry Zone**: area masuk yang dipertimbangkan.
-- **Stop Loss**: area invalidasi.
-- **TP1 / TP2**: target awal dan lanjutan.
+strong_count_all = int((filtered_base["Status"] == "BSJP KUAT").sum())
+ready_count_all = int((filtered_base["Status"] == "BSJP SIAP").sum())
+watch_count_all = int((filtered_base["Status"] == "PANTAU").sum())
 
-**Logika sederhananya:**
-saham dianggap menarik bila volume melonjak, harga tidak lemah, dan arus volume menunjukkan akumulasi.
-""")
+if strong_count_all >= 5:
+    mood = "BULLISH"
+    mood_class = "green"
+elif strong_count_all + ready_count_all >= 5:
+    mood = "NETRAL"
+    mood_class = "yellow"
+else:
+    mood = "SELEKTIF"
+    mood_class = "blue"
+
+# ======================================================
+# SUMMARY CARDS
+# ======================================================
+c1, c2, c3, c4, c5 = st.columns(5)
+
+cards = [
+    ("TOTAL SAHAM DISCAN", len(df), "📈", "blue"),
+    ("BSJP KUAT", strong_count_all, "🎯", "green"),
+    ("KANDIDAT ENTRY", strong_count_all + ready_count_all, "🚀", "blue"),
+    ("SAHAM PANTAU", watch_count_all, "👁️", "yellow"),
+    ("MARKET MOOD", mood, "🐂", mood_class),
+]
+
+for col, (title, value, icon, color) in zip([c1, c2, c3, c4, c5], cards):
+    with col:
+        st.markdown(f"""
+        <div class="card">
+            <div style="display:flex;justify-content:space-between;">
+                <div>
+                    <div class="metric-title">{title}</div>
+                    <div class="metric-value {color}">{value}</div>
+                </div>
+                <div style="font-size:34px;">{icon}</div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+st.write("")
+
+# ======================================================
+# FILTER BAR
+# ======================================================
+st.markdown('<div class="filter-box">', unsafe_allow_html=True)
+f1, f2, f3, f4, f5, f6 = st.columns([1, 1, 1, 1, 2, 1])
+
+with f1:
+    price_filter = st.selectbox("Filter Harga", ["Semua Harga", "< 1000", "< 500"])
+with f2:
+    max_price_top = st.number_input("Harga Maksimal", value=int(max_price), step=50)
+with f3:
+    status_filter = st.selectbox("Tampilkan", ["Semua", "BSJP KUAT", "BSJP SIAP", "PANTAU", "TUNGGU"])
+with f4:
+    only_best = st.toggle("Kandidat Terbaik", value=False)
+with f5:
+    search = st.text_input("Cari kode / nama emiten...", placeholder="Contoh: BBCA / GOTO")
+with f6:
+    reset_filter = st.button("Reset Filter")
+st.markdown('</div>', unsafe_allow_html=True)
+
+filtered = filtered_base.copy()
+
+if price_filter == "< 1000":
+    filtered = filtered[filtered["Harga"] < 1000]
+elif price_filter == "< 500":
+    filtered = filtered[filtered["Harga"] < 500]
+
+filtered = filtered[filtered["Harga"] <= max_price_top]
+
+if status_filter != "Semua":
+    filtered = filtered[filtered["Status"] == status_filter]
+
+if only_best:
+    filtered = filtered[filtered["Status"].isin(["BSJP KUAT", "BSJP SIAP"])]
+
+if search:
+    filtered = filtered[filtered["Kode"].str.contains(search.upper(), na=False)]
+
+filtered = filtered.head(int(max_result)).copy()
+
+st.write("")
+
+# ======================================================
+# PREMIUM TABLE
+# ======================================================
+def status_emoji(status):
+    if status == "BSJP KUAT":
+        return "🟢 BSJP KUAT"
+    if status == "BSJP SIAP":
+        return "🔵 BSJP SIAP"
+    if status == "PANTAU":
+        return "🟡 PANTAU"
+    return "🔴 TUNGGU"
+
+if filtered.empty:
+    st.warning("Tidak ada saham yang lolos filter.")
+    st.stop()
+
+table_df = filtered.copy()
+table_df["Status"] = table_df["Status"].apply(status_emoji)
+table_df["Harga"] = table_df["Harga"].apply(lambda x: f"{x:,.0f}")
+table_df["Volume"] = table_df["Volume"].apply(volume_short)
+table_df["Value"] = table_df["Value"].apply(rupiah_short)
+for col in ["Breakout", "Support", "Resistance", "SL", "Target 1", "Target 2"]:
+    table_df[col] = table_df[col].apply(lambda x: f"{x:,.0f}")
+table_df["Risk/Reward"] = table_df["Risk/Reward"].apply(lambda x: f"1 : {x:.2f}")
+table_df["Chg %"] = table_df["Chg %"].apply(lambda x: f"{x:.2f}%")
+
+show_cols = [
+    "Rank", "Kode", "Harga", "Chg %", "Volume", "RVOL", "Value", "RSI", "MACD",
+    "MA20/MA50", "Trend", "Breakout", "Support", "Resistance", "Score",
+    "Status", "Entry Area", "SL", "Target 1", "Target 2", "Risk/Reward", "Alasan Sinyal"
+]
+
+st.markdown("### 🏆 RANKING BSJP")
+
+st.dataframe(
+    table_df[show_cols],
+    use_container_width=True,
+    height=535,
+    hide_index=True,
+    column_config={
+        "Rank": st.column_config.NumberColumn("Rank", width="small"),
+        "Kode": st.column_config.TextColumn("Kode", width="small"),
+        "Harga": st.column_config.TextColumn("Harga", width="small"),
+        "Chg %": st.column_config.TextColumn("Chg %", width="small"),
+        "Volume": st.column_config.TextColumn("Volume", width="small"),
+        "RVOL": st.column_config.NumberColumn("RVOL", format="%.2f", width="small"),
+        "Value": st.column_config.TextColumn("Value", width="small"),
+        "RSI": st.column_config.NumberColumn("RSI", format="%.1f", width="small"),
+        "MACD": st.column_config.TextColumn("MACD", width="small"),
+        "MA20/MA50": st.column_config.TextColumn("MA20/MA50", width="small"),
+        "Trend": st.column_config.TextColumn("Trend", width="small"),
+        "Breakout": st.column_config.TextColumn("Breakout", width="small"),
+        "Support": st.column_config.TextColumn("Support", width="small"),
+        "Resistance": st.column_config.TextColumn("Resistance", width="small"),
+        "Score": st.column_config.ProgressColumn(
+            "Score",
+            min_value=0,
+            max_value=100,
+            format="%d",
+            width="medium"
+        ),
+        "Status": st.column_config.TextColumn("Status", width="medium"),
+        "Entry Area": st.column_config.TextColumn("Entry Area", width="medium"),
+        "SL": st.column_config.TextColumn("SL", width="small"),
+        "Target 1": st.column_config.TextColumn("Target 1", width="small"),
+        "Target 2": st.column_config.TextColumn("Target 2", width="small"),
+        "Risk/Reward": st.column_config.TextColumn("Risk/Reward", width="small"),
+        "Alasan Sinyal": st.column_config.TextColumn("Alasan Sinyal", width="large"),
+    }
+)
+
+st.caption(f"Menampilkan 1 - {len(filtered)} dari {len(df)} saham")
+
+# ======================================================
+# TELEGRAM ALERT
+# ======================================================
+st.markdown("### 📲 Alert Telegram")
+
+if telegram_enabled:
+    if st.button("Kirim Alert Kandidat BSJP"):
+        if send_only_strong:
+            alert_df = filtered[filtered["Status"] == "BSJP KUAT"]
+        else:
+            alert_df = filtered[filtered["Status"].isin(["BSJP KUAT", "BSJP SIAP"])]
+
+        alert_df = alert_df.head(int(telegram_top_n))
+
+        if alert_df.empty:
+            st.warning("Tidak ada kandidat yang layak dikirim.")
+        else:
+            lines = [
+                "🚀 <b>ALERT BSJP SCREENER</b>",
+                f"Update: {now.strftime('%d/%m/%Y %H:%M:%S')} WIB",
+                ""
+            ]
+
+            for _, r in alert_df.iterrows():
+                lines.append(
+                    f"📌 <b>{r['Kode']}</b> | {r['Status']}\n"
+                    f"Harga: {r['Harga']:,.0f}\n"
+                    f"Score: {r['Score']}/100\n"
+                    f"RSI: {r['RSI']} | RVOL: {r['RVOL']}\n"
+                    f"Entry: {r['Entry Area']}\n"
+                    f"SL: {r['SL']:,.0f}\n"
+                    f"TP1: {r['Target 1']:,.0f} | TP2: {r['Target 2']:,.0f}\n"
+                    f"RR: 1 : {r['Risk/Reward']:.2f}\n"
+                    f"Alasan: {r['Alasan Sinyal']}\n"
+                )
+
+            ok, msg = send_telegram_message(bot_token, chat_id, "\n".join(lines))
+            if ok:
+                st.success("Alert berhasil dikirim ke Telegram.")
+            else:
+                st.error(f"Gagal kirim alert: {msg}")
+else:
+    st.info("Aktifkan Telegram dari sidebar untuk mengirim alert.")
+
+# ======================================================
+# DETAIL PANEL
+# ======================================================
+st.markdown("---")
+st.markdown("### 🔎 DETAIL SAHAM TERPILIH")
+
+selected_code = st.selectbox("Pilih saham", filtered["Kode"].tolist())
+row = filtered[filtered["Kode"] == selected_code].iloc[0]
+
+status_class = (
+    "green" if row["Status"] == "BSJP KUAT"
+    else "blue" if row["Status"] == "BSJP SIAP"
+    else "yellow" if row["Status"] == "PANTAU"
+    else "red"
+)
+
+left, mid, right = st.columns([1.1, 2.2, 1.3])
+
+with left:
+    st.markdown(f"""
+    <div class="card-small">
+        <h2>{row['Kode']} ⭐</h2>
+        <h1>{row['Harga']:,.0f}</h1>
+        <p class="{status_class}">{row['Status']}</p>
+        <hr>
+        <p>Value: <b>{rupiah_short(row['Value'])}</b></p>
+        <p>Volume: <b>{volume_short(row['Volume'])}</b></p>
+        <p>RVOL: <b>{row['RVOL']}</b></p>
+        <p>RSI: <b>{row['RSI']}</b></p>
+        <p>Trend: <b>{row['Trend']}</b></p>
+    </div>
+    """, unsafe_allow_html=True)
+
+with mid:
+    st.markdown(f"""
+    <div class="card-small">
+        <h3>📊 ANALISA TEKNIKAL</h3>
+        <p><b>Alasan Sinyal:</b></p>
+        <p>{row['Alasan Sinyal']}</p>
+        <hr>
+        <p>MACD: <b>{row['MACD']}</b></p>
+        <p>MA20 / MA50: <b>{row['MA20/MA50']}</b></p>
+        <p>Breakout: <b>{row['Breakout']:,.0f}</b></p>
+        <p>Support: <b>{row['Support']:,.0f}</b></p>
+        <p>Resistance: <b>{row['Resistance']:,.0f}</b></p>
+        <p class="gray">Catatan: gunakan chart broker/TradingView untuk konfirmasi candle real-time sebelum entry.</p>
+    </div>
+    """, unsafe_allow_html=True)
+
+success_rate = min(max(int(row["Score"]), 35), 90)
+
+with right:
+    st.markdown(f"""
+    <div class="card-small">
+        <h3>🎯 STRATEGI</h3>
+        <p>Entry Area: <b>{row['Entry Area']}</b></p>
+        <p>Stop Loss: <b>{row['SL']:,.0f}</b></p>
+        <p>Target 1: <b>{row['Target 1']:,.0f}</b></p>
+        <p>Target 2: <b>{row['Target 2']:,.0f}</b></p>
+        <p>Risk / Reward: <b class="green">1 : {row['Risk/Reward']:.2f}</b></p>
+        <hr>
+        <h1 class="green">{success_rate}%</h1>
+        <p>Peluang sukses estimasi</p>
+    </div>
+    """, unsafe_allow_html=True)
+
+st.caption("Disclaimer: Screener ini hanya alat bantu analisa, bukan ajakan beli/jual.")
